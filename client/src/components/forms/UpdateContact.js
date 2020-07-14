@@ -1,28 +1,24 @@
 import React, { useEffect, useState } from 'react'
 import { useMutation } from '@apollo/react-hooks'
-
 import { Form, Input, Button } from 'antd'
+import { UPDATE_CONTACT } from '../../queries'
 
-import { v4 as uuidv4 } from 'uuid'
-
-import { ADD_CONTACT, GET_CONTACTS } from '../../queries'
-
-const AddContact = () => {
-  const [id] = useState(uuidv4())
-  const [addContact] = useMutation(ADD_CONTACT)
+const UpdateContact = props => {
+  const [id] = useState(props.id)
+  const [firstName, setFirstName] = useState(props.firstName)
+  const [lastName, setLastName] = useState(props.lastName)
+  const [updateContact] = useMutation(UPDATE_CONTACT)
 
   const [form] = Form.useForm()
   const [, forceUpdate] = useState()
 
-  // To disable submit button at the beginning.
   useEffect(() => {
     forceUpdate({})
   }, [])
 
   const onFinish = values => {
     const { firstName, lastName } = values
-
-    addContact({
+    updateContact({
       variables: {
         id,
         firstName,
@@ -30,46 +26,61 @@ const AddContact = () => {
       },
       optimisticResponse: {
         __typename: 'Mutation',
-        addContact: {
+        updateContact: {
           __typename: 'Contact',
           id,
           firstName,
           lastName
         }
-      },
-      update: (proxy, { data: { addContact } }) => {
-        const data = proxy.readQuery({ query: GET_CONTACTS })
-        proxy.writeQuery({
-          query: GET_CONTACTS,
-          data: {
-            ...data,
-            contacts: [...data.contacts, addContact]
-          }
-        })
       }
     })
+    props.onButtonClick()
+  }
+
+  const updateStateVariable = (variable, value) => {
+    switch (variable) {
+      case 'firstName':
+        setFirstName(value)
+        break
+      case 'lastName':
+        setLastName(value)
+        break
+      default:
+        break
+    }
   }
 
   return (
     <Form
       form={form}
-      name='add-contact-form'
+      name='update-contact-form'
       layout='inline'
       onFinish={onFinish}
+      initialValues={{
+        firstName: firstName,
+        lastName: lastName
+      }}
       size='large'
-      style={{ marginBottom: '40px' }}
     >
       <Form.Item
         name='firstName'
+        label='First Name'
         rules={[{ required: true, message: 'Please input your first name!' }]}
       >
-        <Input placeholder='i.e. John' />
+        <Input
+          placeholder='i.e. John'
+          onChange={e => updateStateVariable('firstName', e.target.value)}
+        />
       </Form.Item>
       <Form.Item
         name='lastName'
+        label='Last Name'
         rules={[{ required: true, message: 'Please input your last name!' }]}
       >
-        <Input placeholder='i.e. Smith' />
+        <Input
+          placeholder='i.e. Smith'
+          onChange={e => updateStateVariable('lastName', e.target.value)}
+        />
       </Form.Item>
       <Form.Item shouldUpdate={true}>
         {() => (
@@ -81,12 +92,13 @@ const AddContact = () => {
               form.getFieldsError().filter(({ errors }) => errors.length).length
             }
           >
-            Add Contact
+            Update Contact
           </Button>
         )}
       </Form.Item>
+      <Button onClick={props.onButtonClick}>Cancel</Button>
     </Form>
   )
 }
 
-export default AddContact
+export default UpdateContact
